@@ -1,0 +1,24 @@
+# Виртуальное окружение
+venv/
+.venv/
+# Кэш Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Лог-файлы
+*.log
+*.tmp
+
+# PyCharm
+.idea/
+
+# Зависимости и сборочные файлы
+build/
+dist/
+*.egg-info/
+
+# Файл зависимостей
+pip-log.txt
+pip-delete-this-directory.txt
