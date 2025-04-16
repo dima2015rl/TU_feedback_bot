@@ -190,27 +190,3 @@ async def create_test_data():
         await session.commit()
         print("Тестовые данные успешно созданы")
 
-async def delete_tables():
-    """Создает все таблицы в БД, если их нет"""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-
-async def create_tables():
-    """Создает все таблицы в БД, если их нет"""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-async def on_startup():
-    print("Удаление таблиц")
-    await delete_tables()
-
-    print("Создание таблиц...")
-    await create_tables()  # Сначала создаем таблицы
-
-    print("Запуск инициализации тестовых данных...")
-    await create_test_data()  # Затем заполняем данными
-    print("Инициализация завершена")
-
-if __name__ == '__main__':
-    asyncio.run(on_startup())

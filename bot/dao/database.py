@@ -59,3 +59,14 @@ async def get_session_without_commit() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
+
+async def delete_tables():
+    """Удаляет все таблицы в БД"""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+
+async def create_tables():
+    """Создает все таблицы в БД, если их нет"""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
