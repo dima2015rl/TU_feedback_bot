@@ -11,7 +11,7 @@ from sqlalchemy import (
     Enum as SQLEnum,
     TIMESTAMP,
     Integer,
-    LargeBinary, select, insert
+    LargeBinary, select, insert, BigInteger
 )
 from sqlalchemy.orm import (
     Mapped,
@@ -36,7 +36,7 @@ class User(Base):
     """Модель пользователя/администратора"""
     __tablename__ = "users"
 
-    telegram_id: Mapped[int] = mapped_column(unique=True,index=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger,unique=True,index=True)
     fio: Mapped[str] = mapped_column(String(150))
     phone: Mapped[Optional[str]] = mapped_column(String(20))
     email: Mapped[Optional[str]] = mapped_column(String(100))

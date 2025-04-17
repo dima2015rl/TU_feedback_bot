@@ -29,7 +29,7 @@ async def main():
     dp.include_router(faq_router)
 
     # регистрация функций
-    dp.startup.register(on_startup)
+    #dp.startup.register(on_startup)
 
     # запуск бота в режиме long polling при запуске бот очищает все обновления, которые были за его моменты бездействия
     try:
