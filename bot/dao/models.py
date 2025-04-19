@@ -76,7 +76,6 @@ class CustomQuestion(Base):
 
     question_text: Mapped[str] = mapped_column(Text)
     is_anonymous: Mapped[bool] = mapped_column(Boolean, default=True)
-    contact_info: Mapped[Optional[str]] = mapped_column(String(200), default="")
     status: Mapped[QuestionStatus] = mapped_column(SQLEnum(QuestionStatus), default=QuestionStatus.PENDING)
 
     # Связи

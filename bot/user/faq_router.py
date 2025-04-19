@@ -21,6 +21,7 @@ async def faq_catalog(call: CallbackQuery, session_without_commit: AsyncSession)
 
 @faq_router.callback_query(F.data.startswith("faq_category_"))
 async def faq_questions(call: CallbackQuery, session_without_commit: AsyncSession):
+    await call.answer("Загрузка...")
     category_id = int(call.data.split("faq_category_")[-1])
     question_data = await FAQQuestionDAO(session_without_commit).find_all(QuestionModel(category_id=category_id))
     await call.message.edit_text(
@@ -30,6 +31,7 @@ async def faq_questions(call: CallbackQuery, session_without_commit: AsyncSessio
 
 @faq_router.callback_query(F.data.startswith("faq_answer_"))
 async def faq_questions(call: CallbackQuery, session_without_commit: AsyncSession):
+    await call.answer("Загрузка...")
     question_id = int(call.data.split("faq_answer_")[-1])
     question = await FAQQuestionDAO(session_without_commit).find_one_or_none_by_id(question_id)
     if not question:

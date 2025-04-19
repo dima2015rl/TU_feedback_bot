@@ -1,10 +1,13 @@
 import asyncio
 
+from bot.admin.admin_router import admin_router
 from bot.config import dp, bot
 from bot.dao.database import delete_tables, create_tables
 from bot.dao.database_middleware import ReadOnlyDBSessionMiddleware,WriteDBSessionMiddleware
 from bot.dao.models import create_test_data
 from bot.user.faq_router import faq_router
+from bot.user.profile_router import profile_router
+from bot.user.question_router import question_router
 from bot.user.user_router import user_router
 
 
@@ -27,6 +30,9 @@ async def main():
     # регистрация роутеров
     dp.include_router(user_router)
     dp.include_router(faq_router)
+    dp.include_router(profile_router)
+    dp.include_router(question_router)
+    dp.include_router(admin_router)
 
     # регистрация функций
     #dp.startup.register(on_startup)

@@ -1,4 +1,8 @@
+from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, Field
+
+from bot.dao.models import QuestionStatus
 
 
 class TelegramIDModel(BaseModel):
@@ -13,3 +17,13 @@ class UserModel(TelegramIDModel):
 
 class QuestionModel(BaseModel):
     category_id: int
+
+class CreateCustomQuestionModel(BaseModel):
+    question_text: str
+    is_anonymous: bool = True
+    user_id: int
+
+class UpdateUserModel(BaseModel):
+    fio: str | None
+    email: str | None
+    phone: str
