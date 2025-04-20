@@ -8,6 +8,7 @@ from bot.dao.models import create_test_data
 from bot.user.faq_router import faq_router
 from bot.user.profile_router import profile_router
 from bot.user.question_router import question_router
+from bot.admin.question_router import question_router as admin_question_router
 from bot.user.user_router import user_router
 
 
@@ -33,6 +34,7 @@ async def main():
     dp.include_router(profile_router)
     dp.include_router(question_router)
     dp.include_router(admin_router)
+    dp.include_router(admin_question_router)
 
     # регистрация функций
     #dp.startup.register(on_startup)

@@ -1,112 +1,134 @@
+from html import escape
+
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, CallbackQuery
 from loguru import logger
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.admin.kbs import admin_kb
-from bot.admin.schemas import QuestionUpdateModel, QuestionModel
+from bot.admin.kbs import admin_kb, faq_kb, faq_category_menu_kb, accept_decline_kb
+from bot.admin.schemas import FaqModel
 from bot.config import settings
-from bot.dao.dao import CustomQuestionDAO, UserDAO
-from bot.dao.models import QuestionStatus
-from bot.user.kbs import main_user_kb
-from bot.user.schemas import TelegramIDModel, UserModel
+from bot.dao.dao import FAQCategoryDAO
+from bot.admin.kbs import cancel_kb
 
 admin_router = Router()
 
 
-class AnswerQuestionState(StatesGroup):
-    waiting_for_answer = State()
+class FaqThemeState(StatesGroup):
+    set_name = State()
 
 @admin_router.callback_query(F.data == "admin_panel", F.from_user.id.in_(settings.ADMIN_IDS))
 async def start_admin(call: CallbackQuery):
-    await call.message.edit_text(text="Доступ в админ-панель разрешен!\Выберите дейвтвие",reply_markup=admin_kb())
+    await call.message.edit_text(text="Доступ в админ-панель разрешен!\nВыберите дейвтвие",reply_markup=admin_kb())
 
+@admin_router.callback_query(F.data == "menu_faq_category", F.from_user.id.in_(settings.ADMIN_IDS))
+async def faq_list(call: CallbackQuery,session_without_commit: AsyncSession):
+    faq_categories = await FAQCategoryDAO(session_without_commit).find_all()
+    await call.message.edit_text(text="⚙️Работа с FAQ-категориями⚙️",reply_markup=faq_kb(faq_categories))
 
-@admin_router.callback_query(F.data.startswith("answer_question_"))
-async def answer_question(call: CallbackQuery, state: FSMContext):
-    question_id = int(call.data.split("_")[-1])
-    await state.update_data(question_id=question_id)
+@admin_router.callback_query(F.data.startswith("menu_faq_category_"),F.from_user.id.in_(settings.ADMIN_IDS))
+async def faq_menu(call: CallbackQuery, session_without_commit:AsyncSession):
+    faq_dao = FAQCategoryDAO(session_without_commit)
+    faq_id= int(call.data.split("_")[-1])
+    faq_theme = await faq_dao.find_one_or_none_by_id(faq_id)
+    if not faq_theme:
+        await call.message.edit_text(text="❌Данная тема была удалена другим администратором",reply_markup=admin_kb())
+    await call.message.edit_text(f'⚙️Работа с категорией "{faq_theme.name}"⚙️',
+                                 reply_markup=faq_category_menu_kb(faq_id))
 
-    question_text = "\n".join(call.message.text.split("\n")[1:])
+@admin_router.callback_query(F.data == "add_faq_category", F.from_user.id.in_(settings.ADMIN_IDS))
+async def add_faq(call: CallbackQuery,state: FSMContext):
+    await call.message.edit_text(text=f"✍️Введите название для новой категории вопросов✍️",reply_markup=cancel_kb())
+    await state.set_state(FaqThemeState.set_name)
 
-    for admin_id in settings.ADMIN_IDS:
-        try:
-            await call.message.bot.send_message(
-                chat_id=admin_id,
-                text=f"В данный момент отвечают на вопрос:\n{question_text}",
-            )
-        except Exception as e:
-            logger.error(f"Ошибка отправки админу {admin_id}: {e}")
+@admin_router.message(FaqThemeState.set_name, F.from_user.id.in_(settings.ADMIN_IDS))
+async def add_faq_category(message: Message,state: FSMContext):
+    faq_category_name = escape(message.text)
+    await state.update_data(name=faq_category_name)
+    await message.answer(text=f"Вы уверены, что хотите добавить тему: {faq_category_name}?",
+                              reply_markup=accept_decline_kb("add_faq"))
 
-    await call.message.delete()
-    await call.message.answer(
-        text=(
-            "❗ Вы отвечаете на вопрос:\n\n"
-            f"{question_text}\n\n"
-            "Введите ваш ответ (он будет отправлен пользователю):"
-        )
-    )
-    await state.set_state(AnswerQuestionState.waiting_for_answer)
-
-
-@admin_router.message(AnswerQuestionState.waiting_for_answer)
-async def process_answer(message: Message, state: FSMContext, session_with_commit: AsyncSession):
+@admin_router.callback_query(F.data == "add_faq_y", F.from_user.id.in_(settings.ADMIN_IDS))
+async def add_faq_category_finally(call: CallbackQuery,session_with_commit: AsyncSession,state: FSMContext):
+    data = await state.get_data()
     try:
-        data = await state.get_data()
-        question_id = data.get("question_id")
+        faq_dao = FAQCategoryDAO(session_with_commit)
+        new_theme = await faq_dao.add(FaqModel(**data))
 
-        if not question_id:
-            await state.clear()
-            await message.answer("❌ Ошибка: вопрос не найден!",reply_markup=main_user_kb(message.from_user.id))
+        if new_theme:
+            await call.message.edit_text(
+                text="✅ Новая тема успешно добавлена",
+                reply_markup=admin_kb()
+            )
+    except IntegrityError as e:
+        logger.error(f"Ошибка уникальности: {e}")
+        await call.message.edit_text(
+            text="❌ Тема с таким названием уже существует!",
+            reply_markup=admin_kb()
+        )
+        await session_with_commit.rollback()  # Важно откатить транзакцию
 
-        question_dao = CustomQuestionDAO(session_with_commit)
-        question = await question_dao.find_one_or_none_by_id(data_id=question_id)
-
-        if not question:
-            await state.clear()
-            await message.answer("❌ Вопрос был удален или не существует!",reply_markup=main_user_kb(message.from_user.id))
-            return
-
-
-        if question.user_id:
-            user_dao = UserDAO(session_with_commit)
-            user = await user_dao.find_one_or_none_by_id(data_id=question.user_id)
-            question.status = QuestionStatus.DONE
-
-            if user and user.telegram_id:
-                answer_text = (
-                    "📩 <b>Ответ на ваш вопрос</b>\n\n"
-                    f"❓ Ваш вопрос:\n{question.question_text}\n"
-                    f"💬 Ответ:\n{message.text}"
-                )
-
-                try:
-                    await message.bot.send_message(
-                        chat_id=user.telegram_id,
-                        text=answer_text,
-                    )
-                except Exception as e:
-                    logger.error(f"Не удалось отправить ответ пользователю {user.telegram_id}: {e}")
-                    await message.answer("⚠️ Пользователь заблокировал бота")
-
-        await message.answer("✅ Ответ успешно отправлен!",reply_markup=main_user_kb(message.from_user.id))
     except Exception as e:
-        logger.error(f"Ошибка обработки ответа: {e}")
-        await message.answer("❌ Произошла ошибка при обработке ответа!")
+        logger.error(f"Ошибка в добавлении темы: {e}")
+        await call.message.edit_text(
+            text="❌ Произошла ошибка при добавлении темы",
+            reply_markup=admin_kb()
+        )
+
     finally:
         await state.clear()
 
+@admin_router.callback_query(F.data.startswith("d_faq_"), F.from_user.id.in_(settings.ADMIN_IDS))
+async def remove_faq_theme(call: CallbackQuery,session_without_commit: AsyncSession,state: FSMContext):
+    faq_dao = FAQCategoryDAO(session_without_commit)
+    faq_id = int(call.data.split("_")[-1])
+    faq_theme = await faq_dao.find_one_or_none_by_id(faq_id)
+    if not faq_theme:
+        await call.message.edit_text(text="❌Данная тема была удалена другим администратором", reply_markup=admin_kb())
+    await call.message.edit_text(text=f"Вы уверены, что хотите удалить тему: {faq_theme.name}?\n"
+                                      f"<b>Все вопросы, которые были в неё добавлены тоже будут удалены.</b>",
+                                 reply_markup=accept_decline_kb(f"remove_theme_{faq_theme.id}"))
 
-@admin_router.callback_query(F.data.startswith("delete_question_answer_"))
-async def delete_question(call: CallbackQuery, session_with_commit:AsyncSession,state: FSMContext):
-    quesion_id=int(call.data[-1])
-    question_dao = CustomQuestionDAO(session_with_commit)
-    await question_dao.update(filters=QuestionModel(id=quesion_id),
-                              values=QuestionUpdateModel(status=QuestionStatus.ARCHIEVED))
-    await call.message.delete()
 
-@admin_router.callback_query(F.data == "list_of_questions", F.from_user.id.in_(settings.ADMIN_IDS))
-async def get_questions(call: CallbackQuery, session_with_commit: AsyncSession, state: FSMContext):
+
+@admin_router.callback_query(F.data.startswith("remove_theme_"), F.from_user.id.in_(settings.ADMIN_IDS))
+async def remove_faq_theme_finally(call: CallbackQuery,session_with_commit: AsyncSession):
+    faq_theme_id=int(call.data.split("_")[-2])
+    faq_dao = FAQCategoryDAO(session_with_commit)
+    try:
+        theme = await faq_dao.find_one_or_none_by_id(faq_theme_id)
+
+        if not theme:
+            await call.message.edit_text(
+                text="❌ Тема не найдена!",
+                reply_markup=admin_kb()
+            )
+            return
+
+        await session_with_commit.delete(theme)
+        await session_with_commit.commit()
+
+        await call.message.edit_text(
+            text="✅ Тема и все связанные вопросы успешно удалены!",
+            reply_markup=admin_kb()
+        )
+
+    except IntegrityError as e:
+        await session_with_commit.rollback()
+        logger.error(f"Ошибка удаления темы {faq_theme_id}: {e}")
+        await call.message.edit_text(
+            text="❌ Не удалось удалить тему (возможно, есть связанные данные)",
+            reply_markup=admin_kb()
+        )
+
+    except Exception as e:
+        await session_with_commit.rollback()
+        logger.error(f"Неожиданная ошибка при удалении темы {faq_theme_id}: {e}")
+        await call.message.edit_text(
+            text="❌ Произошла непредвиденная ошибка",
+            reply_markup=admin_kb()
+        )
 

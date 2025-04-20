@@ -8,3 +8,9 @@ class QuestionModel(BaseModel):
 
 class QuestionUpdateModel(BaseModel):
     status: QuestionStatus
+
+class FaqModel(BaseModel):
+    name: str
+
+class FaqIdModel(BaseModel):
+    id: int

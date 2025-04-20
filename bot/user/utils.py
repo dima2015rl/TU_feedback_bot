@@ -50,17 +50,14 @@ async def _save_question(
         )
         if is_anonymous:
             admin_text = (
-                "❓ <b>Новый анонимный вопрос</b>\n"
-                f"📄 <b>Текст вопроса:</b>\n{escape(message.text)}"
+                "❓ <b>Поступил новый анонимный вопрос</b>\n"
+                f"🆔 вопроса: {new_question.id}"
             )
         else:
 
             admin_text = (
-                "❓ <b>Новый персональный вопрос</b>\n"
-                f"✨ <b>Личные данные пользователя:</b> {escape(user.fio) if user.fio else '—'}\n"
-                f"📱 <b>Телефон:</b> <a href='tel:{user.phone}'>{user.phone}</a>\n"
-                f"📧 <b>Email:</b> {escape(user.email) if user.email else '—'}\n"
-                f"📄 <b>Текст вопроса:</b>\n{escape(message.text)}"
+                "❓ <b>Поступил персональный вопрос</b>\n"
+                f"🆔 вопроса: {new_question.id}"
             )
 
         # Отправка админам
@@ -68,8 +65,7 @@ async def _save_question(
             try:
                 await message.bot.send_message(
                     chat_id=admin_id,
-                    text=admin_text,
-                    reply_markup=answer_kb(new_question.id),
+                    text=admin_text
                 )
             except Exception as e:
                 logger.error(f"Ошибка отправки админу {admin_id}: {e}")
