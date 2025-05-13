@@ -1,5 +1,6 @@
 import asyncio
 
+from bot.admin.add_question_router import add_question_router
 from bot.admin.admin_router import admin_router
 from bot.config import dp, bot
 from bot.dao.database import delete_tables, create_tables
@@ -35,6 +36,7 @@ async def main():
     dp.include_router(question_router)
     dp.include_router(admin_router)
     dp.include_router(admin_question_router)
+    dp.include_router(add_question_router)
 
     # регистрация функций
     #dp.startup.register(on_startup)

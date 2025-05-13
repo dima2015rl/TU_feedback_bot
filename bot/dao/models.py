@@ -45,7 +45,6 @@ class User(Base):
 
     # Связи
     custom_questions: Mapped[List["CustomQuestion"]] = relationship(back_populates="user") # вопросы от пользователей
-    responses: Mapped[List["Response"]] = relationship(back_populates="admin")
 
 
 class FAQCategory(Base):
@@ -64,6 +63,8 @@ class FAQQuestion(Base):
 
     question_text: Mapped[str] = mapped_column(Text)
     answer_text: Mapped[str] = mapped_column(Text)
+    file_id: Mapped[Optional[str]] = mapped_column(Text)
+    file_type: Mapped[Optional[str]] = mapped_column(Text)
 
     # Связи
     category_id: Mapped[int] = mapped_column(ForeignKey("faq_categories.id"))
@@ -81,22 +82,6 @@ class CustomQuestion(Base):
     # Связи
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"))
     user: Mapped["User"] = relationship(back_populates="custom_questions")
-
-    response: Mapped[Optional["Response"]] = relationship(back_populates="question")
-
-
-class Response(Base):
-    """Ответы администраторов на кастомные вопросы"""
-    __tablename__ = "responses"
-
-    response_text: Mapped[str] = mapped_column(Text)
-
-    # Связи
-    question_id: Mapped[int] = mapped_column(ForeignKey("custom_questions.id"))
-    question: Mapped["CustomQuestion"] = relationship(back_populates="response")
-
-    admin_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    admin: Mapped["User"] = relationship(back_populates="responses")
 
 
 async def create_test_data():

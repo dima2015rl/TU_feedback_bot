@@ -14,3 +14,13 @@ class FaqModel(BaseModel):
 
 class FaqIdModel(BaseModel):
     id: int
+
+class FaqCreateModel(BaseModel):
+    category_id: int
+    question_text: str
+    answer_text: str
+    file_id: str| None
+    file_type: str | None
+
+class FaqQuestionFindModel(BaseModel):
+    category_id: int

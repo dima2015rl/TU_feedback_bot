@@ -13,8 +13,9 @@ faq_router = Router()
 @faq_router.callback_query(F.data == "faq")
 async def faq_catalog(call: CallbackQuery, session_without_commit: AsyncSession):
     await call.answer("Загрузка...")
+    await call.message.delete()
     categories_data = await FAQCategoryDAO(session_without_commit).find_all()
-    await call.message.edit_text(
+    await call.bot.send_message(chat_id=call.message.chat.id,
         text="Выберите к какой категории относится ваш вопрос:",
         reply_markup=faq_kb(categories_data)
     )
@@ -37,5 +38,22 @@ async def faq_questions(call: CallbackQuery, session_without_commit: AsyncSessio
     if not question:
         await call.answer("Вопрос не найден", reply_markup=answer_kb())
         return
-    await call.message.edit_text(text=f"❓ Вопрос: {question.question_text}\n\n"
-             f"💡 Ответ: {question.answer_text}",reply_markup=answer_kb())
+    await call.message.delete()
+    if question.file_id:
+        if question.file_type == "photo":
+            await call.message.answer_photo(
+                photo=question.file_id,
+                caption=f"❓ Вопрос: {question.question_text}\n\n💡 Ответ: {question.answer_text}",
+                reply_markup=answer_kb()
+            )
+        elif question.file_type == "document":
+            await call.message.answer_document(
+                document=question.file_id,
+                caption=f"❓ Вопрос: {question.question_text}\n\n💡 Ответ: {question.answer_text}",
+                reply_markup=answer_kb()
+            )
+    else:
+        await call.message.answer(
+            text=f"❓ Вопрос: {question.question_text}\n\n💡 Ответ: {question.answer_text}",
+            reply_markup=answer_kb()
+        )

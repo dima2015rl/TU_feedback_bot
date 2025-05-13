@@ -17,7 +17,7 @@ def admin_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="❓Ответить на вопросы❓",callback_data="list_of_questions")
     kb.button(text="ℹ️Работа с FAQ категориямиℹ️",callback_data="menu_faq_category")
-    kb.button(text="Сделать массовую рассылку по пользователям", callback_data="add_faq_question")
+    kb.button(text="Сделать массовую рассылку по пользователям", callback_data="send_for_all")
     kb.button(text="🏠 На главную 🏠", callback_data="home")
     kb.adjust(1)
     return kb.as_markup()
@@ -34,7 +34,7 @@ def faq_kb(faq_categories: List[FAQCategory]) -> InlineKeyboardMarkup:
 
 def faq_category_menu_kb(faq_category_id: int) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="✅ Добавить вопрос в эту категорию ✅",callback_data=f"q_to_faq_{faq_category_id}") #сделать
+    kb.button(text="✅ Добавить вопрос в эту категорию ✅",callback_data=f"q_to_faq_{faq_category_id}")
     kb.button(text="🔍Меню вопросов 🔍",callback_data=f"f_q_menu_{faq_category_id}") #сделать
     kb.button(text="🏠 На главную 🏠", callback_data="home")
     kb.button(text="❌ Удалить тему вместе с вопросами ❌",callback_data=f"d_faq_{faq_category_id}")

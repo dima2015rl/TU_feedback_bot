@@ -44,6 +44,7 @@ async def cmd_start(message: Message, session_with_commit: AsyncSession,state: F
 @user_router.callback_query(F.data == "home")
 async def page_home(call: CallbackQuery,session_with_commit:AsyncSession,state: FSMContext):
     await call.answer("Главная страница")
+    await call.message.delete()
     await state.clear()
     try:
         user_dao = UserDAO(session_with_commit)
@@ -61,12 +62,12 @@ async def page_home(call: CallbackQuery,session_with_commit:AsyncSession,state: 
             )
 
             await user_dao.add(new_user)
-            await call.message.edit_text(text="👋🏻 Добро пожаловать!\n" + text, reply_markup=main_user_kb(call.from_user.id))
+            await call.message.answer(text="👋🏻 Добро пожаловать!\n" + text, reply_markup=main_user_kb(call.from_user.id))
         else:
-            await call.message.edit_text("👋🏻 С возвращением!\n" + text, reply_markup=main_user_kb(call.from_user.id))
+            await call.message.answer("👋🏻 С возвращением!\n" + text, reply_markup=main_user_kb(call.from_user.id))
     except Exception as e:
         logger.error(f"Ошибка в home: {e}")
-        await call.message.edit_text("Ошибка сервера. Попробуйте позже.",reply_markup=main_user_kb(call.from_user.id))
+        await call.message.answer("Ошибка сервера. Попробуйте позже.",reply_markup=main_user_kb(call.from_user.id))
 
 
 
